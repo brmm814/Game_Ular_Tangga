@@ -1,1 +1,807 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Ular Tangga Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 40%, #fef3c7 100%);
+            min-height: 100vh;
+        }
+        /* Floating background blobs animation */
+        .bg-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.5;
+            z-index: 0;
+            animation: floatBlob 14s infinite alternate ease-in-out;
+        }
+        .bg-blob-1 {
+            top: -5%;
+            left: -5%;
+            width: 450px;
+            height: 450px;
+            background: #93c5fd;
+        }
+        .bg-blob-2 {
+            bottom: -5%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: #6ee7b7;
+            animation-delay: -5s;
+        }
+        .bg-blob-3 {
+            top: 35%;
+            left: 45%;
+            width: 400px;
+            height: 400px;
+            background: #fde047;
+            animation-delay: -9s;
+        }
+        @keyframes floatBlob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            50% { transform: translate(40px, -50px) scale(1.15); }
+            100% { transform: translate(-30px, 30px) scale(0.9); }
+        }
+        /* Pattern overlay */
+        .bg-pattern {
+            background-image: radial-gradient(rgba(30, 41, 59, 0.08) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+        h1, h2, h3, .dice-text {
+            font-family: 'Fredoka One', cursive;
+        }
+        #gameCanvas {
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+            border-radius: 16px;
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .dice-box {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ffffff, #f3f4f6);
+            border: 4px solid #e5e7eb;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #1f2937;
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1), 0 6px 12px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .dice-rolling {
+            animation: shake 0.4s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-5deg); }
+            20% { transform: translate(-3px, 0px) rotate(5deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(5deg); }
+            50% { transform: translate(-1px, 2px) rotate(-5deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-5deg); }
+            80% { transform: translate(-1px, -1px) rotate(5deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-5deg); }
+        }
+        .modal-bg {
+            background-color: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 relative overflow-x-hidden">
 
+    <!-- Animated Background Decorative Layer -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div class="bg-blob bg-blob-1"></div>
+        <div class="bg-blob bg-blob-2"></div>
+        <div class="bg-blob bg-blob-3"></div>
+        <div class="absolute inset-0 bg-pattern opacity-70"></div>
+        
+        <!-- Floating Playful Icons -->
+        <div class="absolute top-12 left-10 text-4xl opacity-25 animate-bounce" style="animation-duration: 6s;">🎲</div>
+        <div class="absolute bottom-20 left-16 text-5xl opacity-20 animate-bounce" style="animation-duration: 8s; animation-delay: 1s;">🐍</div>
+        <div class="absolute top-1/3 right-12 text-5xl opacity-20 animate-bounce" style="animation-duration: 7s; animation-delay: 2s;">🪜</div>
+        <div class="absolute bottom-12 right-24 text-4xl opacity-25 animate-bounce" style="animation-duration: 9s; animation-delay: 0.5s;">⭐</div>
+    </div>
+
+    <div class="flex-grow container mx-auto px-4 py-8 max-w-6xl flex flex-col lg:flex-row gap-8 items-start justify-center relative z-10">
+        
+        <!-- Game Board Column -->
+        <div class="w-full lg:w-2/3 flex flex-col items-center bg-white/80 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/60">
+            <div class="w-full relative">
+                <canvas id="gameCanvas" width="600" height="600"></canvas>
+            </div>
+            <p class="mt-4 text-sm text-slate-600 font-bold bg-white/70 px-4 py-1.5 rounded-full shadow-sm border border-slate-200/60">🐍 Ular: Turun &nbsp; | &nbsp; 🪜 Tangga: Naik</p>
+        </div>
+
+        <!-- Controls Column -->
+        <div class="w-full lg:w-1/3 bg-white/85 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/60 flex flex-col items-center relative overflow-hidden">
+            <!-- Decorative header accent -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-400 via-blue-500 to-indigo-500"></div>
+            
+            <h1 class="text-3xl text-slate-800 mb-6 mt-2 text-center">Ular Tangga</h1>
+            
+            <div class="w-full mb-6">
+                <div class="flex bg-slate-100 rounded-lg p-1 border border-slate-200">
+                    <button id="btnModeHuman" onclick="setMode('human')" class="flex-1 py-2 text-sm font-bold rounded-md bg-white shadow-sm text-blue-600 transition-all">Lawan Teman</button>
+                    <button id="btnModeAI" onclick="setMode('ai')" class="flex-1 py-2 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">Lawan Komputer</button>
+                </div>
+            </div>
+
+            <div class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                <h3 class="text-lg font-bold text-slate-700 text-center mb-4 border-b pb-2">Status Permainan</h3>
+                
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-blue-500 shadow-sm border border-blue-700"></div>
+                        <span class="font-bold text-blue-700">Pemain 1</span>
+                    </div>
+                    <span id="posP1" class="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">Kotak: 1</span>
+                </div>
+                
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-red-500 shadow-sm border border-red-700"></div>
+                        <span id="nameP2" class="font-bold text-red-700">Pemain 2</span>
+                    </div>
+                    <span id="posP2" class="font-mono bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Kotak: 1</span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h2 id="turnIndicator" class="text-xl text-blue-600 mb-4 text-center transition-colors duration-300">
+                    Giliran: Pemain 1
+                </h2>
+            </div>
+
+            <div id="dice" class="dice-box mb-6 dice-text shadow-lg cursor-pointer hover:scale-105 transition-transform" onclick="playTurn()">
+                🎲
+            </div>
+
+            <button id="rollBtn" onclick="playTurn()" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transform transition hover:-translate-y-1 active:translate-y-0 text-lg">
+                Lempar Dadu
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Modal Structure -->
+    <div id="customModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-bg opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 transform scale-90 transition-transform duration-300" id="modalContent">
+            <div class="text-center">
+                <div id="modalIcon" class="text-6xl mb-4">🏆</div>
+                <h2 id="modalTitle" class="text-3xl mb-2 text-slate-800">Pemain Menang!</h2>
+                <p id="modalMessage" class="text-slate-600 mb-6">Selamat, kamu telah mencapai kotak 100.</p>
+                <button onclick="resetGame()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-colors">
+                    Main Lagi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sound Effects setup using Tone.js
+        let isAudioInitialized = false;
+        let synth, membraneSynth;
+
+        async function initAudio() {
+            if (isAudioInitialized) return;
+            await Tone.start();
+            
+            // Synth untuk suara melodi (tangga/ular/menang)
+            synth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
+            }).toDestination();
+            
+            // Membrane synth untuk efek perkusi (dadu/langkah)
+            membraneSynth = new Tone.MembraneSynth().toDestination();
+            
+            isAudioInitialized = true;
+        }
+
+        // Initialize audio on first user interaction anywhere on the document
+        document.body.addEventListener('click', initAudio, { once: true });
+
+        function playDiceSound() {
+            if (!isAudioInitialized) return;
+            const now = Tone.now();
+            // Simulate rolling dice sound with multiple quick hits
+            for (let i = 0; i < 5; i++) {
+                membraneSynth.triggerAttackRelease("C2", "32n", now + (i * 0.08));
+            }
+        }
+
+        function playStepSound() {
+            if (!isAudioInitialized) return;
+            membraneSynth.triggerAttackRelease("G2", "32n");
+        }
+
+        function playLadderSound() {
+            if (!isAudioInitialized) return;
+            const now = Tone.now();
+            // Ascending arpeggio
+            synth.triggerAttackRelease("C4", "16n", now);
+            synth.triggerAttackRelease("E4", "16n", now + 0.15);
+            synth.triggerAttackRelease("G4", "16n", now + 0.3);
+            synth.triggerAttackRelease("C5", "8n", now + 0.45);
+        }
+
+        function playSnakeSound() {
+            if (!isAudioInitialized) return;
+            const now = Tone.now();
+            // Descending sliding tone (glissando effect simulation)
+            const osc = new Tone.Oscillator(400, "sawtooth").toDestination().start();
+            osc.frequency.rampTo(100, 1);
+            osc.stop("+" + 1);
+        }
+        
+        function playWinSound() {
+             if (!isAudioInitialized) return;
+             const now = Tone.now();
+             synth.triggerAttackRelease("C4", "8n", now);
+             synth.triggerAttackRelease("E4", "8n", now + 0.2);
+             synth.triggerAttackRelease("G4", "8n", now + 0.4);
+             synth.triggerAttackRelease("C5", "4n", now + 0.6);
+             synth.triggerAttackRelease("G4", "8n", now + 1.0);
+             synth.triggerAttackRelease("C5", "2n", now + 1.2);
+        }
+
+        // ... Existing canvas and game logic variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game Constants & Variables
+        const rows = 10;
+        const cols = 10;
+        let cellSize = canvas.width / cols;
+        const squareColors = ['#fecaca', '#bfdbfe', '#bbf7d0', '#fef08a']; // Red, Blue, Green, Yellow hues
+        
+        // Configuration of Snakes and Ladders (Start: End)
+        const snakes = {
+            16: 6,
+            46: 25,
+            49: 11,
+            62: 19,
+            64: 60,
+            74: 53,
+            89: 68,
+            92: 88,
+            95: 75,
+            99: 80
+        };
+
+        const ladders = {
+            2: 38,
+            7: 14,
+            8: 31,
+            15: 26,
+            21: 42,
+            28: 84,
+            36: 44,
+            51: 67,
+            71: 91,
+            78: 98,
+            87: 94
+        };
+
+        // Players State
+        let players = [
+            { id: 1, name: 'Pemain 1', pos: 1, color: '#3b82f6', outline: '#1d4ed8' }, // Blue
+            { id: 2, name: 'Pemain 2', pos: 1, color: '#ef4444', outline: '#b91c1c' }  // Red
+        ];
+        
+        let currentTurn = 0; // 0 for Player 1, 1 for Player 2
+        let isAnimating = false;
+        let gameMode = 'human'; // 'human' or 'ai'
+
+        function setMode(mode) {
+            if (isAnimating) return; // Mencegah ganti mode saat animasi berjalan
+            gameMode = mode;
+            
+            const btnHuman = document.getElementById('btnModeHuman');
+            const btnAi = document.getElementById('btnModeAI');
+            const nameP2 = document.getElementById('nameP2');
+            
+            if (mode === 'human') {
+                btnHuman.className = "flex-1 py-2 text-sm font-bold rounded-md bg-white shadow-sm text-blue-600 transition-all";
+                btnAi.className = "flex-1 py-2 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all";
+                players[1].name = 'Pemain 2';
+                nameP2.textContent = 'Pemain 2';
+            } else {
+                btnAi.className = "flex-1 py-2 text-sm font-bold rounded-md bg-white shadow-sm text-red-600 transition-all";
+                btnHuman.className = "flex-1 py-2 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all";
+                players[1].name = 'Komputer';
+                nameP2.textContent = 'Komputer';
+            }
+            
+            resetGame();
+        }
+
+        // Responsive Canvas
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const targetWidth = container.clientWidth;
+            // Max width set in CSS, but let's keep canvas drawing sharp
+            canvas.width = targetWidth > 600 ? 600 : targetWidth;
+            canvas.height = canvas.width;
+            cellSize = canvas.width / cols;
+            drawBoard();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Utility: Wait for ms
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // UI Logger
+        function logMessage(msg) {
+            console.log(`> ${msg}`);
+        }
+
+        // UI Modal Functions
+        function showModal(title, message, icon = '🏆') {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalIcon').textContent = icon;
+            
+            modal.classList.remove('hidden');
+            // Trigger reflow to apply transition
+            void modal.offsetWidth; 
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-90');
+            modalContent.classList.add('scale-100');
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-90');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Get Pixel Coordinates for a given square (1-100)
+        function getSquareCenter(pos) {
+            if (pos < 1) pos = 1;
+            if (pos > 100) pos = 100;
+            
+            let zeroBased = pos - 1;
+            let row = Math.floor(zeroBased / 10);
+            let col = zeroBased % 10;
+            
+            // Boustrophedon (snake-like) pattern: odd rows go right-to-left
+            if (row % 2 !== 0) {
+                col = 9 - col;
+            }
+            
+            // row=0 is bottom, row=9 is top in game logic.
+            // In canvas, y=0 is top. So we invert the row for drawing.
+            let canvasRow = 9 - row;
+            
+            let x = (col * cellSize) + (cellSize / 2);
+            let y = (canvasRow * cellSize) + (cellSize / 2);
+            
+            return { x, y };
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let colorIndex = 0;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    // Logic to draw boustrophedon numbers
+                    let gameRow = 9 - row; // gameRow 0 is bottom
+                    let logicalCol = (gameRow % 2 !== 0) ? (9 - col) : col;
+                    let squareNum = (gameRow * 10) + logicalCol + 1;
+
+                    // Draw Square
+                    let x = col * cellSize;
+                    let y = row * cellSize;
+                    
+                    ctx.fillStyle = squareColors[(gameRow + col) % squareColors.length];
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    
+                    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellSize, cellSize);
+                    
+                    // Draw Number
+                    ctx.fillStyle = '#475569'; // text-slate-600
+                    ctx.font = `bold ${cellSize * 0.25}px 'Fredoka One'`;
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(squareNum, x + 4, y + 4);
+                }
+            }
+        }
+
+        function drawAllLadders() {
+            for (const [start, end] of Object.entries(ladders)) {
+                drawLadder(parseInt(start), parseInt(end));
+            }
+        }
+
+        function drawLadder(startPos, endPos) {
+            const start = getSquareCenter(startPos);
+            const end = getSquareCenter(endPos);
+            
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const angle = Math.atan2(dy, dx);
+            const length = Math.hypot(dx, dy);
+            
+            ctx.save();
+            ctx.translate(start.x, start.y);
+            ctx.rotate(angle);
+            
+            const railWidth = cellSize * 0.2; // Distance from center to rail
+            
+            ctx.strokeStyle = '#8B4513'; // SaddleBrown
+            ctx.lineWidth = cellSize * 0.08;
+            ctx.lineCap = 'round';
+            
+            // Left Rail
+            ctx.beginPath();
+            ctx.moveTo(0, -railWidth);
+            ctx.lineTo(length, -railWidth);
+            ctx.stroke();
+            
+            // Right Rail
+            ctx.beginPath();
+            ctx.moveTo(0, railWidth);
+            ctx.lineTo(length, railWidth);
+            ctx.stroke();
+            
+            // Rungs
+            const rungSpacing = cellSize * 0.4;
+            // start slightly inside, end slightly inside
+            for (let i = rungSpacing; i < length; i += rungSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(i, -railWidth);
+                ctx.lineTo(i, railWidth);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        function drawAllSnakes() {
+            for (const [start, end] of Object.entries(snakes)) {
+                drawSnake(parseInt(start), parseInt(end));
+            }
+        }
+
+        function drawSnake(startPos, endPos) {
+            const head = getSquareCenter(startPos);
+            const tail = getSquareCenter(endPos);
+            
+            const dx = tail.x - head.x;
+            const dy = tail.y - head.y;
+            
+            // Generate control points for a bezier curve to make a wiggly S shape
+            // Offset the control points perpendicular to the main axis
+            const offset = cellSize * 1.2;
+            
+            const cp1x = head.x + (dx * 0.25) - (dy * 0.4);
+            const cp1y = head.y + (dy * 0.25) + (dx * 0.4);
+            
+            const cp2x = head.x + (dx * 0.75) + (dy * 0.4);
+            const cp2y = head.y + (dy * 0.75) - (dx * 0.4);
+            
+            ctx.save();
+            
+            // Draw Body (Thick line)
+            ctx.beginPath();
+            ctx.moveTo(head.x, head.y);
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tail.x, tail.y);
+            
+            ctx.strokeStyle = '#22c55e'; // Tailwind green-500
+            ctx.lineWidth = cellSize * 0.3;
+            ctx.lineCap = 'round';
+            
+            // Add shadow
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.stroke();
+            
+            // Remove shadow for inner pattern
+            ctx.shadowColor = 'transparent';
+            
+            // Draw Pattern (Dashed line overlay)
+            ctx.beginPath();
+            ctx.moveTo(head.x, head.y);
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tail.x, tail.y);
+            ctx.strokeStyle = '#14532d'; // Darker green pattern
+            ctx.lineWidth = cellSize * 0.15;
+            ctx.setLineDash([cellSize*0.2, cellSize*0.3]);
+            ctx.stroke();
+            
+            ctx.setLineDash([]); // Reset line dash
+            
+            // Draw Head
+            ctx.beginPath();
+            ctx.arc(head.x, head.y, cellSize * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = '#22c55e';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#14532d';
+            ctx.stroke();
+            
+            // Draw Eyes based on orientation
+            const angle = Math.atan2(tail.y - head.y, tail.x - head.x);
+            ctx.translate(head.x, head.y);
+            ctx.rotate(angle);
+            
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(-4, -6, 4, 0, Math.PI*2); ctx.fill(); // Left eye
+            ctx.beginPath(); ctx.arc(-4, 6, 4, 0, Math.PI*2); ctx.fill();  // Right eye
+            
+            ctx.fillStyle = 'black';
+            ctx.beginPath(); ctx.arc(-5, -6, 2, 0, Math.PI*2); ctx.fill(); // Left pupil
+            ctx.beginPath(); ctx.arc(-5, 6, 2, 0, Math.PI*2); ctx.fill();  // Right pupil
+
+            // Draw Tongue
+            ctx.beginPath();
+            ctx.moveTo(-cellSize*0.25, 0);
+            ctx.lineTo(-cellSize*0.5, 0);
+            ctx.lineTo(-cellSize*0.6, -cellSize*0.1);
+            ctx.moveTo(-cellSize*0.5, 0);
+            ctx.lineTo(-cellSize*0.6, cellSize*0.1);
+            ctx.strokeStyle = '#ef4444'; // Red tongue
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawPlayers() {
+            // Group players by position to offset them if they share a square
+            let positions = {};
+            players.forEach(p => {
+                if(!positions[p.pos]) positions[p.pos] = [];
+                positions[p.pos].push(p);
+            });
+
+            for (const [pos, pl] of Object.entries(positions)) {
+                const center = getSquareCenter(parseInt(pos));
+                
+                // If multiple players on same square, offset them
+                const offsetAmount = cellSize * 0.15;
+                
+                pl.forEach((p, index) => {
+                    let ox = 0;
+                    let oy = 0;
+                    if (pl.length > 1) {
+                        ox = (index === 0) ? -offsetAmount : offsetAmount;
+                        oy = (index === 0) ? -offsetAmount : offsetAmount;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(center.x + ox, center.y + oy, cellSize * 0.2, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = p.outline;
+                    ctx.stroke();
+                    
+                    // Highlight inner to make it look like a glossy token
+                    ctx.beginPath();
+                    ctx.arc(center.x + ox - (cellSize*0.05), center.y + oy - (cellSize*0.05), cellSize * 0.08, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.fill();
+                });
+            }
+        }
+
+        function drawBoard() {
+            drawGrid();
+            drawAllLadders();
+            drawAllSnakes();
+            drawPlayers();
+        }
+
+        function updateUI() {
+            document.getElementById('posP1').textContent = `Kotak: ${players[0].pos}`;
+            document.getElementById('posP2').textContent = `Kotak: ${players[1].pos}`;
+            
+            const turnInd = document.getElementById('turnIndicator');
+            if(currentTurn === 0) {
+                turnInd.textContent = `Giliran: ${players[0].name}`;
+                turnInd.className = "text-xl font-bold text-blue-600 mb-4 text-center transition-colors duration-300";
+            } else {
+                turnInd.textContent = `Giliran: ${players[1].name}`;
+                turnInd.className = "text-xl font-bold text-red-600 mb-4 text-center transition-colors duration-300";
+            }
+        }
+
+        async function animateDice(finalValue) {
+            const diceEl = document.getElementById('dice');
+            const rollBtn = document.getElementById('rollBtn');
+            diceEl.classList.add('dice-rolling');
+            rollBtn.disabled = true;
+            rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            playDiceSound();
+            
+            // Randomly change text to simulate rolling
+            for(let i=0; i<15; i++) {
+                diceEl.textContent = Math.floor(Math.random() * 6) + 1;
+                await wait(50);
+            }
+            
+            diceEl.textContent = finalValue;
+            diceEl.classList.remove('dice-rolling');
+        }
+
+        async function playTurn(isAuto = false) {
+            if(isAnimating) return;
+            // Cegah klik manual manusia jika giliran komputer
+            if(gameMode === 'ai' && currentTurn === 1 && isAuto !== true) return;
+            
+            // Ensure audio context is started if player didn't click first (e.g. AI turn start edge cases)
+            if(!isAudioInitialized && typeof Tone !== 'undefined') {
+                 initAudio();
+            }
+
+            isAnimating = true;
+            
+            let p = players[currentTurn];
+            
+            // 1. Roll Dice
+            let roll = Math.floor(Math.random() * 6) + 1;
+            logMessage(`${p.name} melempar dadu... dapat ${roll}!`);
+            await animateDice(roll);
+            await wait(300);
+
+            // 2. Calculate target
+            let targetPos = p.pos + roll;
+            let exactWin = true; // Rule: Must land exactly on 100, or just stop at 100? Let's just stop at 100 for easier play.
+            
+            if (targetPos > 100) {
+                // Bounce back rule
+                let excess = targetPos - 100;
+                targetPos = 100 - excess;
+                logMessage(`${p.name} melebihi 100, mundur ke ${targetPos}`);
+            }
+            
+            // 3. Animate Movement (step by step)
+            let steps = roll;
+            if (p.pos + roll > 100) {
+                // Re-calculate steps for bouncing animation
+                // Go forward to 100, then backwards
+                for (let i = p.pos + 1; i <= 100; i++) {
+                    p.pos = i;
+                    drawBoard();
+                    updateUI();
+                    playStepSound();
+                    await wait(200);
+                }
+                for(let i = 99; i >= targetPos; i--) {
+                    p.pos = i;
+                    drawBoard();
+                    updateUI();
+                    playStepSound();
+                    await wait(200);
+                }
+            } else {
+                // Normal step forward
+                for (let i = p.pos + 1; i <= targetPos; i++) {
+                    p.pos = i;
+                    drawBoard();
+                    updateUI();
+                    playStepSound();
+                    await wait(250);
+                }
+            }
+
+            // 4. Check Snakes or Ladders
+            await wait(200);
+            if (snakes[p.pos]) {
+                playSnakeSound();
+                logMessage(`Oh tidak! ${p.name} digigit ular dari ${p.pos} ke ${snakes[p.pos]}.`);
+                p.pos = snakes[p.pos];
+                drawBoard();
+                updateUI();
+                await wait(1000); // Wait longer for sound to finish
+            } else if (ladders[p.pos]) {
+                playLadderSound();
+                logMessage(`Yeay! ${p.name} naik tangga dari ${p.pos} ke ${ladders[p.pos]}.`);
+                p.pos = ladders[p.pos];
+                drawBoard();
+                updateUI();
+                await wait(1000); // Wait longer for sound to finish
+            }
+
+            // 5. Check Win Condition
+            if (p.pos === 100) {
+                drawBoard();
+                updateUI();
+                playWinSound();
+                logMessage(`🎉 ${p.name} memenangkan permainan!`);
+                showModal(`${p.name} Menang!`, `Selamat! ${p.name} telah berhasil mencapai kotak 100 lebih dulu.`, '🏅');
+                isAnimating = false;
+                return; // End game
+            }
+
+            // 6. Switch Turn
+            // Standard rule: Roll a 6 gets another turn
+            if (roll === 6) {
+                logMessage(`${p.name} dapat angka 6! Lempar lagi.`);
+            } else {
+                currentTurn = (currentTurn + 1) % players.length;
+            }
+            
+            updateUI();
+            isAnimating = false;
+            
+            const rollBtn = document.getElementById('rollBtn');
+            if (gameMode === 'ai' && currentTurn === 1) {
+                // Keep button disabled during AI turn
+                rollBtn.disabled = true;
+                rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                
+                // Trigger AI turn automatically after a short delay
+                if (players[0].pos !== 100 && players[1].pos !== 100) {
+                    setTimeout(() => {
+                        if (currentTurn === 1) playTurn(true);
+                    }, 1000);
+                }
+            } else {
+                // Re-enable button for human
+                rollBtn.disabled = false;
+                rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function resetGame() {
+            hideModal();
+            players[0].pos = 1;
+            players[1].pos = 1;
+            currentTurn = 0;
+            isAnimating = false;
+            
+            document.getElementById('dice').textContent = '🎲';
+            
+            const rollBtn = document.getElementById('rollBtn');
+            rollBtn.disabled = false;
+            rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            updateUI();
+            drawBoard();
+        }
+
+        // Initialize when window loads
+        window.onload = function() {
+            resizeCanvas(); // This also calls drawBoard()
+            updateUI();
+        };
+
+    </script>
+</body>
+</html>
